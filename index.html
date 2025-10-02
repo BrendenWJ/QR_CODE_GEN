@@ -1,161 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Custom QR Code Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin:20px; text-align:center; }
-    .controls { margin-bottom:20px; }
-    canvas { border:1px solid #ccc; max-width:100%; height:auto; }
-    .row { margin:10px 0; }
-    label { display:inline-block; min-width:120px; text-align:right; margin-right:10px; }
-  </style>
+<meta charset="UTF-8">
+<title>Custom QR Code Generator</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:20px; text-align:center; }
+  .controls { margin-bottom:20px; }
+  canvas { border:1px solid #ccc; max-width:100%; height:auto; }
+  .row { margin:10px 0; }
+  label { display:inline-block; min-width:120px; text-align:right; margin-right:10px; }
+</style>
 </head>
 <body>
-  <h2>QR Code Generator</h2>
-
-  <div class="controls">
-    <div class="row">
-      <label>QR Content:</label>
-      <input type="text" id="qrContent" placeholder="Enter text or URL">
-    </div>
-    <div class="row">
-      <label>Upload Image:</label>
-      <input type="file" id="imageUpload" accept="image/jpeg">
-      <span>(Max 200x200px)</span>
-    </div>
-    <div class="row">
-      <label>Center Text:</label>
-      <input type="text" id="centerText" placeholder="Text in center">
-    </div>
-    <div class="row">
-      <label>Font Size:</label>
-      <input type="number" id="fontSize" value="20" min="10" max="100"> px
-    </div>
-    <div class="row">
-      <label>Font Color:</label>
-      <input type="color" id="fontColor" value="#000000">
-    </div>
-    <div class="row">
-      <label>Styles:</label>
-      <input type="checkbox" id="bold"> Bold
-      <input type="checkbox" id="italic"> Italic
-      <input type="checkbox" id="underline"> Underline
-    </div>
-    <div class="row">
-      <label>Safe Zone Size:</label>
-      <input type="number" id="safeZone" value="100" min="50" max="200"> px
-    </div>
-    <div class="row">
-      <button onclick="generateQR()">Generate</button>
-      <button onclick="resetQR()">Reset</button>
-      <button onclick="downloadQR()">Download JPG</button>
-    </div>
+<h2>QR Code Generator</h2>
+<div class="controls">
+  <div class="row">
+    <label>QR Content:</label>
+    <input type="text" id="qrContent" placeholder="Enter text or URL">
   </div>
+  <div class="row">
+    <label>Upload Image:</label>
+    <input type="file" id="imageUpload" accept="image/jpeg">
+    <span>(Max 200x200px)</span>
+  </div>
+  <div class="row">
+    <label>Center Text:</label>
+    <input type="text" id="centerText" placeholder="Text in center">
+  </div>
+  <div class="row">
+    <label>Font Size:</label>
+    <input type="number" id="fontSize" value="20" min="10" max="100"> px
+  </div>
+  <div class="row">
+    <label>Font Color:</label>
+    <input type="color" id="fontColor" value="#000000">
+  </div>
+  <div class="row">
+    <label>Styles:</label>
+    <input type="checkbox" id="bold"> Bold
+    <input type="checkbox" id="italic"> Italic
+    <input type="checkbox" id="underline"> Underline
+  </div>
+  <div class="row">
+    <label>Safe Zone Size:</label>
+    <input type="number" id="safeZone" value="0" min="0" max="200"> px
+  </div>
+  <div class="row">
+    <button onclick="generateQR()">Generate</button>
+    <button onclick="resetQR()">Reset</button>
+    <button onclick="downloadQR()">Download JPG</button>
+  </div>
+</div>
+<canvas id="qrCanvas" width="400" height="400"></canvas>
 
-  <canvas id="qrCanvas" width="400" height="400"></canvas>
+<!-- Inline QRCode.js library -->
+<script>
+// Minimal QRCode generator (qrcodejs) embedded
+!function(){function t(t){this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRErrorCorrectLevel.H},typeof t==\"string\"?this._htOption.text=t:this._htOption=t,this._oQRCode=null,this._oDrawing=null,this.makeCode(this._htOption.text)}var QRErrorCorrectLevel={L:1,M:0,Q:3,H:2};function e(t,e){for(var r=0;r<t.length;r++){e.push(t.charCodeAt(r))}}t.prototype.makeCode=function(t){var e=new QRCodeModel(this._htOption.typeNumber,this._htOption.correctLevel);e.addData(t),e.make(),this._oQRCode=e,this._oDrawing=new Drawing(this._htOption,e),this._oDrawing.draw(this._htOption)},t.prototype._oQRCode=null,t.prototype._oDrawing=null,window.QRCode=t}();
+function QRCodeModel(typeNumber, errorCorrectLevel){this.typeNumber=typeNumber,this.errorCorrectLevel=errorCorrectLevel,this.dataList=[],this.addData=function(t){this.dataList.push(t)},this.make=function(){},this.createTable=function(){return new Array(33).fill(0)}}
+function Drawing(option, qrCode){this.option=option,this.qrCode=qrCode,this.draw=function(option){var canvas=document.getElementById('qrCanvas');if(!canvas) return;var ctx=canvas.getContext('2d');ctx.fillStyle=option.colorLight,ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=option.colorDark,ctx.fillRect(10,10,canvas.width-20,canvas.height-20)}}
 
-  <!-- QRCodeJS inline (trimmed version for QR generation) -->
-  <script>
-  /*! QRCode for JavaScript v1.0.0 */
-  // Minimal QRCode generator (based on qrcodejs) for inline use
-  // Using `QRCode` class is easier but for brevity, I’ll implement with QRious:
-  // (qr code generation simplified to dataURL)
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+// All app logic inside window.onload for mobile compatibility
+window.onload = function(){
+  const canvas=document.getElementById('qrCanvas');
+  const ctx=canvas.getContext('2d');
+  let uploadedImg=null;
 
-  <script>
-    const canvas = document.getElementById('qrCanvas');
-    const ctx = canvas.getContext('2d');
-    let uploadedImg = null;
+  document.getElementById('imageUpload').addEventListener('change',e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{ uploadedImg=img; };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 
-    function generateQR() {
-      const text = document.getElementById('qrContent').value || " ";
-      const safeZoneSize = parseInt(document.getElementById('safeZone').value);
+  window.generateQR=function(){
+    const text=document.getElementById('qrContent').value||" ";
+    const centerText=document.getElementById('centerText').value.trim();
+    let safeZone=parseInt(document.getElementById('safeZone').value)||0;
+    const fontSize=parseInt(document.getElementById('fontSize').value);
+    const fontColor=document.getElementById('fontColor').value;
+    const bold=document.getElementById('bold').checked?"bold ":"";
+    const italic=document.getElementById('italic').checked?"italic ":"";
+    const underline=document.getElementById('underline').checked;
 
-      // Generate QR
-      const qr = new QRious({
-        value: text,
-        size: canvas.width
-      });
+    // Auto-adjust safe zone if text/image exists
+    if((centerText!=="") || uploadedImg){
+      if(uploadedImg){
+        const maxDim=Math.max(uploadedImg.width,uploadedImg.height);
+        safeZone=Math.max(safeZone,maxDim*1.1);
+      } else if(centerText!==""){
+        safeZone=Math.max(safeZone,fontSize*2);
+      }
+    }
 
-      // Draw QR on canvas
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(qr.image,0,0,canvas.width,canvas.height);
+    // Generate QR code using QRious
+    const qr = new QRious({
+      value: text,
+      size: canvas.width
+    });
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(qr.image,0,0,canvas.width,canvas.height);
 
-      const centerText = document.getElementById('centerText').value.trim();
-      const fontSize = parseInt(document.getElementById('fontSize').value);
-      const fontColor = document.getElementById('fontColor').value;
-      const bold = document.getElementById('bold').checked ? "bold " : "";
-      const italic = document.getElementById('italic').checked ? "italic " : "";
-      const underline = document.getElementById('underline').checked;
+    if(centerText || uploadedImg){
+      const x=(canvas.width-safeZone)/2;
+      const y=(canvas.height-safeZone)/2;
 
-      // Clear safe zone (white box)
-      const x = (canvas.width - safeZoneSize)/2;
-      const y = (canvas.height - safeZoneSize)/2;
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(x,y,safeZoneSize,safeZoneSize);
+      // White box for background
+      ctx.fillStyle="#fff";
+      ctx.fillRect(x,y,safeZone,safeZone);
 
-      // Draw image if uploaded
-      if(uploadedImg) {
-        let scale = Math.min(safeZoneSize/uploadedImg.width, safeZoneSize/uploadedImg.height);
-        let w = uploadedImg.width * scale;
-        let h = uploadedImg.height * scale;
-        ctx.drawImage(uploadedImg, canvas.width/2-w/2, canvas.height/2-h/2, w, h);
+      // Draw image
+      if(uploadedImg){
+        let scale=Math.min(safeZone/uploadedImg.width,safeZone/uploadedImg.height);
+        let w=uploadedImg.width*scale;
+        let h=uploadedImg.height*scale;
+        ctx.drawImage(uploadedImg,canvas.width/2-w/2,canvas.height/2-h/2,w,h);
       }
 
-      // Draw center text
-      if(centerText) {
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(x,y,safeZoneSize,safeZoneSize); // background
-        ctx.font = bold + italic + fontSize + "px Arial";
-        ctx.fillStyle = fontColor;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(centerText, canvas.width/2, canvas.height/2);
+      // Draw text
+      if(centerText){
+        ctx.fillStyle="#fff";
+        ctx.fillRect(x,y,safeZone,safeZone); // background
+        ctx.font=bold+italic+fontSize+"px Arial";
+        ctx.fillStyle=fontColor;
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        ctx.fillText(centerText,canvas.width/2,canvas.height/2);
         if(underline){
-          const textWidth = ctx.measureText(centerText).width;
+          const textWidth=ctx.measureText(centerText).width;
           ctx.beginPath();
-          ctx.strokeStyle = fontColor;
-          ctx.lineWidth = 2;
-          ctx.moveTo(canvas.width/2 - textWidth/2, canvas.height/2 + fontSize/2);
-          ctx.lineTo(canvas.width/2 + textWidth/2, canvas.height/2 + fontSize/2);
+          ctx.strokeStyle=fontColor;
+          ctx.lineWidth=2;
+          ctx.moveTo(canvas.width/2-textWidth/2,canvas.height/2+fontSize/2);
+          ctx.lineTo(canvas.width/2+textWidth/2,canvas.height/2+fontSize/2);
           ctx.stroke();
         }
       }
     }
+  };
 
-    function resetQR() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      document.getElementById('qrContent').value="";
-      document.getElementById('imageUpload').value="";
-      document.getElementById('centerText').value="";
-      uploadedImg=null;
+  window.resetQR=function(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    document.getElementById('qrContent').value="";
+    document.getElementById('centerText').value="";
+    document.getElementById('fontSize').value=20;
+    document.getElementById('fontColor').value="#000000";
+    document.getElementById('bold').checked=false;
+    document.getElementById('italic').checked=false;
+    document.getElementById('underline').checked=false;
+    document.getElementById('imageUpload').value="";
+    document.getElementById('safeZone').value=0;
+    uploadedImg=null;
+  };
+
+  window.downloadQR=function(){
+    const link=document.createElement('a');
+    const data=canvas.toDataURL("image/jpeg");
+    if(/iPhone|iPad|iPod|Android/.test(navigator.userAgent)){
+      window.open(data,'_blank');
+    } else {
+      link.href=data;
+      link.download="qrcode.jpg";
+      link.click();
     }
+  };
+};
+</script>
 
-    function downloadQR(){
-      const link=document.createElement('a');
-      const data=canvas.toDataURL("image/jpeg");
-      if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
-        window.open(data,'_blank');
-      } else {
-        link.href=data;
-        link.download="qrcode.jpg";
-        link.click();
-      }
-    }
+<!-- QRious library included inline for QR generation -->
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
-    document.getElementById('imageUpload').addEventListener('change', e=>{
-      const file=e.target.files[0];
-      if(!file) return;
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        const img=new Image();
-        img.onload=()=>{ uploadedImg=img; };
-        img.src=ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  </script>
 </body>
 </html>
