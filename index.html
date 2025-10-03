@@ -69,87 +69,84 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Generate QR
-      let qr = qrcode(0, 'M');
-      qr.addData(text);
-      qr.make();
+      // Temporary offscreen canvas for QR
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
 
-      const moduleCount = qr.getModuleCount();
-      const cellSize = Math.floor(canvas.width / moduleCount);
-      const offset = (canvas.width - cellSize * moduleCount) / 2;
+      const qrCode = new QRCode(tempCanvas, {
+        text: text,
+        width: canvas.width,
+        height: canvas.height,
+        correctLevel: QRCode.CorrectLevel.M
+      });
 
-      // Draw QR modules
-      for (let row = 0; row < moduleCount; row++) {
-        for (let col = 0; col < moduleCount; col++) {
-          ctx.fillStyle = qr.isDark(row, col) ? '#000' : '#fff';
-          ctx.fillRect(offset + col * cellSize, offset + row * cellSize, cellSize, cellSize);
+      const qrImg = new Image();
+      qrImg.onload = function() {
+        ctx.drawImage(qrImg, 0, 0, canvas.width, canvas.height);
+
+        // Draw uploaded image in center
+        if (uploadedImage) {
+          const maxImgSize = canvas.width / 3;
+          let imgW = uploadedImage.width;
+          let imgH = uploadedImage.height;
+          if (imgW > imgH && imgW > maxImgSize) {
+            imgH *= maxImgSize / imgW;
+            imgW = maxImgSize;
+          } else if (imgH > maxImgSize) {
+            imgW *= maxImgSize / imgH;
+            imgH = maxImgSize;
+          }
+          const imgX = (canvas.width - imgW) / 2;
+          const imgY = (canvas.height - imgH) / 2;
+          ctx.drawImage(uploadedImage, imgX, imgY, imgW, imgH);
         }
-      }
 
-      // Draw uploaded image in center
-      let imgX, imgY, imgW, imgH;
-      if (uploadedImage) {
-        const maxImgSize = canvas.width / 3;
-        imgW = uploadedImage.width;
-        imgH = uploadedImage.height;
-        if (imgW > imgH && imgW > maxImgSize) {
-          imgH *= maxImgSize / imgW;
-          imgW = maxImgSize;
-        } else if (imgH > maxImgSize) {
-          imgW *= maxImgSize / imgH;
-          imgH = maxImgSize;
-        }
-        imgX = (canvas.width - imgW) / 2;
-        imgY = (canvas.height - imgH) / 2;
-        ctx.drawImage(uploadedImage, imgX, imgY, imgW, imgH);
-      }
-
-      // Draw center text
-      if (centerText) {
-        ctx.font = `${italic}${bold}${fontSize}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        let textWidth = ctx.measureText(centerText).width;
-
-        // Shrink font if too wide
-        while (textWidth > canvas.width * 0.6 && fontSize > 8) {
-          fontSize--;
+        // Draw center text
+        if (centerText) {
           ctx.font = `${italic}${bold}${fontSize}px Arial`;
-          textWidth = ctx.measureText(centerText).width;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          let textWidth = ctx.measureText(centerText).width;
+
+          // Shrink font if too wide
+          while (textWidth > canvas.width * 0.6 && fontSize > 8) {
+            fontSize--;
+            ctx.font = `${italic}${bold}${fontSize}px Arial`;
+            textWidth = ctx.measureText(centerText).width;
+          }
+
+          const padding = 6;
+          const textX = canvas.width / 2;
+          const textY = canvas.height / 2;
+
+          // Semi-transparent background behind text
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillRect(textX - textWidth / 2 - padding, textY - fontSize / 2 - padding / 2, textWidth + padding * 2, fontSize + padding);
+
+          ctx.fillStyle = fontColor;
+          ctx.fillText(centerText, textX, textY);
+
+          if (underline) {
+            ctx.beginPath();
+            ctx.moveTo(textX - textWidth / 2, textY + fontSize / 2 + 2);
+            ctx.lineTo(textX + textWidth / 2, textY + fontSize / 2 + 2);
+            ctx.strokeStyle = fontColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
         }
-
-        const padding = 6;
-        const textX = canvas.width / 2;
-        const textY = canvas.height / 2;
-
-        // Semi-transparent background behind text
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillRect(textX - textWidth / 2 - padding, textY - fontSize / 2 - padding / 2, textWidth + padding * 2, fontSize + padding);
-
-        ctx.fillStyle = fontColor;
-        ctx.fillText(centerText, textX, textY);
-
-        // Underline
-        if (underline) {
-          ctx.beginPath();
-          ctx.moveTo(textX - textWidth / 2, textY + fontSize / 2 + 2);
-          ctx.lineTo(textX + textWidth / 2, textY + fontSize / 2 + 2);
-          ctx.strokeStyle = fontColor;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-      }
+      };
+      qrImg.src = tempCanvas.toDataURL();
     }
 
     document.getElementById('generateBtn').addEventListener('click', generateQR);
-
     document.getElementById('resetBtn').addEventListener('click', () => {
       document.getElementById('qrContent').value = '';
       document.getElementById('centerText').value = '';
       uploadedImage = null;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
-
     document.getElementById('downloadBtn').addEventListener('click', () => {
       const link = document.createElement('a');
       link.download = 'qrcode.jpg';
