@@ -1,169 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Custom QR Code Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    canvas { border: 1px solid #ccc; margin-top: 20px; }
-    label { display: block; margin: 5px 0; }
-  </style>
+<meta charset="UTF-8">
+<title>Custom QR Code Generator</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  canvas { border: 1px solid #ccc; margin-top: 20px; }
+  label { display: block; margin: 5px 0; }
+</style>
 </head>
 <body>
-  <h2>Custom QR Code Generator</h2>
+<h2>Custom QR Code Generator</h2>
 
-  <label>QR Content: 
-    <input type="text" id="qrContent" style="width:80%;" value="https://valknutgroup.com/">
-  </label>
+<label>QR Content: <input type="text" id="qrContent" style="width:80%;" value="https://valknutgroup.com/"></label>
+<label>Upload Image (max 200x200px): <input type="file" id="imageUpload" accept="image/*"></label>
+<label>Center Text: <input type="text" id="centerText" placeholder="Text in center"></label>
+<label>Font Color: <input type="color" id="fontColor" value="#000000"></label>
+<label>Size: <input type="number" id="fontSize" value="20" min="8" max="100"></label>
+<label><input type="checkbox" id="bold"> Bold</label>
+<label><input type="checkbox" id="italic"> Italic</label>
+<label><input type="checkbox" id="underline"> Underline</label>
 
-  <label>Upload Image (max 200x200px): 
-    <input type="file" id="imageUpload" accept="image/*"> 
-  </label>
+<br>
+<button id="generateBtn">Generate</button>
+<button id="resetBtn">Reset</button>
+<button id="downloadBtn">Download</button>
 
-  <label>Center Text: 
-    <input type="text" id="centerText" placeholder="Text in center">
-  </label>
+<canvas id="qrCanvas" width="400" height="400"></canvas>
 
-  <label>Font Color: <input type="color" id="fontColor" value="#000000"></label>
-  <label>Size: <input type="number" id="fontSize" value="20" min="8" max="100"></label>
-  <label><input type="checkbox" id="bold"> Bold</label>
-  <label><input type="checkbox" id="italic"> Italic</label>
-  <label><input type="checkbox" id="underline"> Underline</label>
+<!-- QR engine -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <br>
-  <button id="generateBtn">Generate</button>
-  <button id="resetBtn">Reset</button>
-  <button id="downloadBtn">Download</button>
+<script>
+const canvas = document.getElementById('qrCanvas');
+const ctx = canvas.getContext('2d');
+let uploadedImage = null;
 
-  <canvas id="qrCanvas" width="400" height="400"></canvas>
+document.getElementById('imageUpload').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    const img = new Image();
+    img.onload = () => uploadedImage = img;
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+});
 
-  <!-- QR engine -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <div id="tempQR" style="display:none;"></div>
+function generateQR() {
+  const text = document.getElementById('qrContent').value || '';
+  const centerText = document.getElementById('centerText').value.trim();
+  const fontColor = document.getElementById('fontColor').value;
+  let fontSize = parseInt(document.getElementById('fontSize').value, 10);
+  const bold = document.getElementById('bold').checked ? 'bold ' : '';
+  const italic = document.getElementById('italic').checked ? 'italic ' : '';
+  const underline = document.getElementById('underline').checked;
 
-  <script>
-    const canvas = document.getElementById('qrCanvas');
-    const ctx = canvas.getContext('2d');
-    let uploadedImage = null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    document.getElementById('imageUpload').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const img = new Image();
-        img.onload = function() {
-          uploadedImage = img;
-        };
-        img.src = evt.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
+  // Create hidden div
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'absolute';
+  tempDiv.style.left = '-9999px';
+  document.body.appendChild(tempDiv);
 
-    function generateQR() {
-      const text = document.getElementById('qrContent').value || '';
-      const centerText = document.getElementById('centerText').value.trim();
-      const fontColor = document.getElementById('fontColor').value;
-      let fontSize = parseInt(document.getElementById('fontSize').value, 10);
-      const bold = document.getElementById('bold').checked ? 'bold ' : '';
-      const italic = document.getElementById('italic').checked ? 'italic ' : '';
-      const underline = document.getElementById('underline').checked;
+  const qr = new QRCode(tempDiv, {
+    text: text,
+    width: canvas.width,
+    height: canvas.height,
+    correctLevel: QRCode.CorrectLevel.M
+  });
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      document.getElementById('tempQR').innerHTML = "";
+  // Give it a tiny delay to render
+  setTimeout(() => {
+    const qrImg = tempDiv.querySelector('img');
+    if (!qrImg) return;
+    const image = new Image();
+    image.onload = () => {
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-      // Generate QR in temp div
-      const qr = new QRCode(document.getElementById('tempQR'), {
-        text: text,
-        width: canvas.width,
-        height: canvas.height,
-        correctLevel: QRCode.CorrectLevel.M
-      });
-
-      // Grab QR image
-      setTimeout(() => { // wait for QRCode to render
-        const qrImg = document.querySelector('#tempQR img, #tempQR canvas');
-        if (!qrImg) return;
-
-        // Draw QR onto main canvas
-        if (qrImg.tagName === 'IMG') {
-          const image = new Image();
-          image.onload = () => drawFinal(image);
-          image.src = qrImg.src;
-        } else if (qrImg.tagName === 'CANVAS') {
-          drawFinal(qrImg);
+      // Draw uploaded image
+      if (uploadedImage) {
+        const maxImgSize = canvas.width / 3;
+        let imgW = uploadedImage.width;
+        let imgH = uploadedImage.height;
+        if (imgW > imgH && imgW > maxImgSize) {
+          imgH *= maxImgSize / imgW;
+          imgW = maxImgSize;
+        } else if (imgH > maxImgSize) {
+          imgW *= maxImgSize / imgH;
+          imgH = maxImgSize;
         }
+        const imgX = (canvas.width - imgW)/2;
+        const imgY = (canvas.height - imgH)/2;
+        ctx.drawImage(uploadedImage, imgX, imgY, imgW, imgH);
+      }
 
-      }, 100);
-      
-      function drawFinal(qrImg) {
-        ctx.drawImage(qrImg, 0, 0, canvas.width, canvas.height);
+      // Draw center text
+      if (centerText) {
+        ctx.font = `${italic}${bold}${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        let textWidth = ctx.measureText(centerText).width;
 
-        // Draw uploaded image
-        if (uploadedImage) {
-          const maxImgSize = canvas.width / 3;
-          let imgW = uploadedImage.width;
-          let imgH = uploadedImage.height;
-          if (imgW > imgH && imgW > maxImgSize) {
-            imgH *= maxImgSize / imgW;
-            imgW = maxImgSize;
-          } else if (imgH > maxImgSize) {
-            imgW *= maxImgSize / imgH;
-            imgH = maxImgSize;
-          }
-          const imgX = (canvas.width - imgW) / 2;
-          const imgY = (canvas.height - imgH) / 2;
-          ctx.drawImage(uploadedImage, imgX, imgY, imgW, imgH);
-        }
-
-        // Draw center text
-        if (centerText) {
+        while (textWidth > canvas.width*0.6 && fontSize > 8) {
+          fontSize--;
           ctx.font = `${italic}${bold}${fontSize}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          let textWidth = ctx.measureText(centerText).width;
+          textWidth = ctx.measureText(centerText).width;
+        }
 
-          while (textWidth > canvas.width * 0.6 && fontSize > 8) {
-            fontSize--;
-            ctx.font = `${italic}${bold}${fontSize}px Arial`;
-            textWidth = ctx.measureText(centerText).width;
-          }
+        const padding = 6;
+        const textX = canvas.width/2;
+        const textY = canvas.height/2;
 
-          const padding = 6;
-          const textX = canvas.width / 2;
-          const textY = canvas.height / 2;
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillRect(textX - textWidth/2 - padding, textY - fontSize/2 - padding/2, textWidth + padding*2, fontSize + padding);
 
-          ctx.fillStyle = 'rgba(255,255,255,0.7)';
-          ctx.fillRect(textX - textWidth / 2 - padding, textY - fontSize / 2 - padding / 2, textWidth + padding * 2, fontSize + padding);
+        ctx.fillStyle = fontColor;
+        ctx.fillText(centerText, textX, textY);
 
-          ctx.fillStyle = fontColor;
-          ctx.fillText(centerText, textX, textY);
-
-          if (underline) {
-            ctx.beginPath();
-            ctx.moveTo(textX - textWidth / 2, textY + fontSize / 2 + 2);
-            ctx.lineTo(textX + textWidth / 2, textY + fontSize / 2 + 2);
-            ctx.strokeStyle = fontColor;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
+        if (underline) {
+          ctx.beginPath();
+          ctx.moveTo(textX - textWidth/2, textY + fontSize/2 + 2);
+          ctx.lineTo(textX + textWidth/2, textY + fontSize/2 + 2);
+          ctx.strokeStyle = fontColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
         }
       }
-    }
 
-    document.getElementById('generateBtn').addEventListener('click', generateQR);
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      document.getElementById('qrContent').value = '';
-      document.getElementById('centerText').value = '';
-      uploadedImage = null;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      const link = document.createElement('a');
-      link.download = 'qrcode.jpg';
-      link.href = canvas.toDataURL('image/jpeg');
-      link.click();
-    });
-  </script>
+      // Clean up
+      document.body.removeChild(tempDiv);
+    };
+    image.src = qrImg.src;
+  }, 50);
+}
+
+document.getElementById('generateBtn').addEventListener('click', generateQR);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('qrContent').value = '';
+  document.getElementById('centerText').value = '';
+  uploadedImage = null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+});
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'qrcode.jpg';
+  link.href = canvas.toDataURL('image/jpeg');
+  link.click();
+});
+</script>
 </body>
 </html>
