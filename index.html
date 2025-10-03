@@ -8,7 +8,7 @@
   canvas { border: 1px solid #ccc; margin-top: 20px; display: block; }
   label { display: block; margin: 5px 0; }
   .controls { margin-bottom: 10px; }
-  .controls input, .controls button { margin-right: 5px; margin-bottom: 5px; }
+  .controls input, .controls select, .controls button { margin-right: 5px; margin-bottom: 5px; }
 </style>
 </head>
 <body>
@@ -36,6 +36,21 @@
   <label><input type="checkbox" id="bold"> Bold</label>
   <label><input type="checkbox" id="italic"> Italic</label>
   <label><input type="checkbox" id="underline"> Underline</label>
+
+  <!-- Safe zone options -->
+  <label>Safe Zone Shape:
+    <select id="safeShape">
+      <option value="auto">Auto</option>
+      <option value="circle">Circle</option>
+      <option value="rectangle">Rectangle</option>
+    </select>
+  </label>
+  <label>Safe Zone Width:
+    <input type="number" id="safeWidth" placeholder="auto">
+  </label>
+  <label>Safe Zone Height:
+    <input type="number" id="safeHeight" placeholder="auto">
+  </label>
 
   <button id="generateBtn">Generate</button>
   <button id="resetBtn">Reset</button>
@@ -71,40 +86,60 @@ async function generateQR() {
   const underline = document.getElementById('underline').checked;
   const fontColor = document.getElementById('fontColor').value;
 
+  const shape = document.getElementById('safeShape').value;
+  let safeW = parseInt(document.getElementById('safeWidth').value) || 0;
+  let safeH = parseInt(document.getElementById('safeHeight').value) || 0;
+
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Determine safe zone radius
-  let safeRadius = fontSize;
-  if (uploadedImage) {
-    const imgMaxSize = Math.max(uploadedImage.width, uploadedImage.height);
-    safeRadius = Math.max(safeRadius, imgMaxSize/2 + 10);
+  // Auto-size safe zone if not entered
+  if (!safeW || !safeH) {
+    if (uploadedImage) {
+      safeW = uploadedImage.width + 8;
+      safeH = uploadedImage.height + 8;
+    } else if (centerText) {
+      ctx.font = `${italic}${bold}${fontSize}px Arial`;
+      const textWidth = ctx.measureText(centerText).width;
+      safeW = textWidth + 8;
+      safeH = fontSize + 8;
+    } else {
+      safeW = safeH = 50;
+    }
   }
-  if (centerText) safeRadius = Math.max(safeRadius, fontSize + 10);
 
   // Generate QR data
   const qr = await QRCode.create(text, { errorCorrectionLevel: 'H' });
   const moduleCount = qr.modules.size;
   const moduleSize = canvas.width / moduleCount;
+  const cx = canvas.width/2;
+  const cy = canvas.height/2;
 
   ctx.fillStyle = "#000";
   for (let r = 0; r < moduleCount; r++) {
     for (let c = 0; c < moduleCount; c++) {
-      if (qr.modules.get(r, c)) {
-        const x = c * moduleSize;
-        const y = r * moduleSize;
-        const dx = x + moduleSize/2 - canvas.width/2;
-        const dy = y + moduleSize/2 - canvas.height/2;
-        if (Math.sqrt(dx*dx + dy*dy) < safeRadius) continue; // skip center
-        ctx.fillRect(x, y, moduleSize, moduleSize);
+      if (!qr.modules.get(r,c)) continue;
+      const x = c*moduleSize + moduleSize/2;
+      const y = r*moduleSize + moduleSize/2;
+
+      let inside = false;
+      if (shape === "rectangle") {
+        inside = (x > cx - safeW/2 && x < cx + safeW/2 && y > cy - safeH/2 && y < cy + safeH/2);
+      } else { // auto or circle
+        const dx = x - cx;
+        const dy = y - cy;
+        const radius = Math.max(safeW, safeH)/2;
+        inside = (dx*dx + dy*dy < radius*radius);
       }
+      if (inside) continue;
+      ctx.fillRect(c*moduleSize, r*moduleSize, moduleSize, moduleSize);
     }
   }
 
-  // Draw uploaded image in center
+  // Draw uploaded image
   if (uploadedImage) {
     let imgW = uploadedImage.width;
     let imgH = uploadedImage.height;
-    const maxImgSize = safeRadius * 2 - 10;
+    const maxImgSize = Math.min(safeW, safeH) - 8;
     if (imgW > imgH && imgW > maxImgSize) {
       imgH *= maxImgSize / imgW;
       imgW = maxImgSize;
@@ -120,12 +155,12 @@ async function generateQR() {
     ctx.font = `${italic}${bold}${fontSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const textX = canvas.width/2;
-    const textY = canvas.height/2;
+    const textX = cx;
+    const textY = cy;
 
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     const textWidth = ctx.measureText(centerText).width;
-    ctx.fillRect(textX - textWidth/2 - 6, textY - fontSize/2 - 3, textWidth + 12, fontSize + 6);
+    ctx.fillRect(textX - textWidth/2 - 4, textY - fontSize/2 - 2, textWidth + 8, fontSize + 4);
 
     ctx.fillStyle = fontColor;
     ctx.fillText(centerText, textX, textY);
@@ -145,6 +180,8 @@ document.getElementById('generateBtn').addEventListener('click', generateQR);
 document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('qrContent').value = '';
   document.getElementById('centerText').value = '';
+  document.getElementById('safeWidth').value = '';
+  document.getElementById('safeHeight').value = '';
   uploadedImage = null;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 });
