@@ -62,7 +62,8 @@
 
 <canvas id="qrCanvas" width="400" height="400"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+<!-- More compatible QR library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 <script>
 const canvas = document.getElementById('qrCanvas');
 const ctx = canvas.getContext('2d');
@@ -94,14 +95,19 @@ function generateQR() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Create QR code
-  const qr = qrcode(0, 'M');
-  qr.addData(qrText);
-  qr.make();
-  const count = qr.getModuleCount();
-  const moduleSize = canvas.width / count;
+  // Build QR with qrcode.js
+  const qr = new QRCode(document.createElement("div"), {
+    text: qrText,
+    width: canvas.width,
+    height: canvas.height,
+    margin: 0,
+    correctLevel: QRCode.CorrectLevel.M
+  });
 
-  // Auto-safe zone if text or image present
+  const qrCanvas = qr._el.querySelector("canvas");
+  ctx.drawImage(qrCanvas, 0, 0, canvas.width, canvas.height);
+
+  // Auto safe zone size
   let safeX = canvas.width / 2, safeY = canvas.height / 2;
   if ((centerText || uploadedImage) && (isNaN(safeW) || isNaN(safeH))) {
     if (centerText) {
@@ -115,33 +121,18 @@ function generateQR() {
     }
   }
 
-  // Draw QR modules skipping safe zone
-  ctx.fillStyle = "#000";
-  ctx.imageSmoothingEnabled = false;
-  for (let r = 0; r < count; r++) {
-    for (let c = 0; c < count; c++) {
-      if (qr.isDark(r, c)) {
-        const x = c * moduleSize;
-        const y = r * moduleSize;
-
-        let inSafe = false;
-        if ((centerText || uploadedImage) && safeW && safeH) {
-          const left = safeX - safeW / 2, top = safeY - safeH / 2;
-          if (shape === 'circle' || (shape === 'auto' && centerText)) {
-            const dx = x + moduleSize / 2 - safeX;
-            const dy = y + moduleSize / 2 - safeY;
-            const radius = Math.max(safeW, safeH) / 2;
-            if (dx * dx + dy * dy <= radius * radius) inSafe = true;
-          } else {
-            if (x >= left && x < left + safeW && y >= top && y < top + safeH) inSafe = true;
-          }
-        }
-
-        if (!inSafe) {
-          ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(moduleSize), Math.ceil(moduleSize));
-        }
-      }
+  // Mask safe zone
+  if ((centerText || uploadedImage) && safeW && safeH) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    if (shape === 'circle' || (shape === 'auto' && centerText)) {
+      ctx.beginPath();
+      ctx.arc(safeX, safeY, Math.max(safeW, safeH)/2, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(safeX - safeW/2, safeY - safeH/2, safeW, safeH);
     }
+    ctx.restore();
   }
 
   // Draw uploaded image
@@ -161,20 +152,14 @@ function generateQR() {
     ctx.font = `${italic}${bold}${fontSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    let textWidth = ctx.measureText(centerText).width;
-    while (textWidth > canvas.width * 0.6 && fontSize > 8) {
-      fontSize--;
-      ctx.font = `${italic}${bold}${fontSize}px Arial`;
-      textWidth = ctx.measureText(centerText).width;
-    }
-
     ctx.fillStyle = fontColor;
     ctx.fillText(centerText, safeX, safeY);
 
     if (underline) {
+      const textWidth = ctx.measureText(centerText).width;
       ctx.beginPath();
-      ctx.moveTo(safeX - textWidth / 2, safeY + fontSize / 2 + 2);
-      ctx.lineTo(safeX + textWidth / 2, safeY + fontSize / 2 + 2);
+      ctx.moveTo(safeX - textWidth/2, safeY + fontSize/2 + 2);
+      ctx.lineTo(safeX + textWidth/2, safeY + fontSize/2 + 2);
       ctx.strokeStyle = fontColor;
       ctx.lineWidth = 2;
       ctx.stroke();
