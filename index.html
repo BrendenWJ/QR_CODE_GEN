@@ -6,13 +6,14 @@
   <title>Custom QR Code Generator</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    canvas { margin-top: 20px; }
+    canvas { margin-top: 20px; border: 1px solid #ddd; }
     label { display: block; margin-top: 10px; }
     input, select, button { margin: 5px; padding: 5px; }
   </style>
 </head>
 <body>
   <h2>Custom QR Code Generator</h2>
+
   <label>Enter Text/URL:
     <input type="text" id="qrText" placeholder="Enter text or URL">
   </label>
@@ -40,6 +41,10 @@
   </label>
   <br>
   <button onclick="generateQR()">Generate QR Code</button>
+  <button onclick="downloadQR()">Download</button>
+  <button onclick="resetQR()">Reset</button>
+
+  <br>
   <canvas id="qrCanvas"></canvas>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
@@ -142,6 +147,28 @@
         ctx.fillStyle = "black";
         ctx.fillText(centerText, cx, cy);
       }
+    }
+
+    function downloadQR() {
+      const canvas = document.getElementById("qrCanvas");
+      const link = document.createElement("a");
+      link.download = "qr_code.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function resetQR() {
+      document.getElementById("qrText").value = "";
+      document.getElementById("centerText").value = "";
+      document.getElementById("fontSize").value = 20;
+      document.getElementById("safeShape").value = "auto";
+      document.getElementById("safeWidth").value = "";
+      document.getElementById("safeHeight").value = "";
+      document.getElementById("imageUpload").value = "";
+      uploadedImage = null;
+      const canvas = document.getElementById("qrCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   </script>
 </body>
