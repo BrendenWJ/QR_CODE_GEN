@@ -1,43 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Custom QR Code Generator</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  canvas { border: 1px solid #ccc; margin-top: 20px; display: block; }
-  label { display: block; margin: 5px 0; }
-  .controls { margin-bottom: 10px; }
-  .controls input, .controls select, .controls button { margin-right: 5px; margin-bottom: 5px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom QR Code Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    canvas { margin-top: 20px; }
+    label { display: block; margin-top: 10px; }
+    input, select, button { margin: 5px; padding: 5px; }
+  </style>
 </head>
 <body>
-<h2>Custom QR Code Generator</h2>
-
-<div class="controls">
-  <label>QR Content:
-    <input type="text" id="qrContent" style="width:80%;" value="https://valknutgroup.com/">
+  <h2>Custom QR Code Generator</h2>
+  <label>Enter Text/URL:
+    <input type="text" id="qrText" placeholder="Enter text or URL">
   </label>
-
-  <label>Upload Image (max 200x200px):
+  <label>Choose File:
     <input type="file" id="imageUpload" accept="image/*">
   </label>
-
   <label>Center Text:
-    <input type="text" id="centerText" placeholder="Center text">
-  </label>
-  <label>Font Color:
-    <input type="color" id="fontColor" value="#000000">
+    <input type="text" id="centerText" placeholder="Optional text">
   </label>
   <label>Font Size:
-    <input type="number" id="fontSize" value="20" min="8" max="100">
+    <input type="number" id="fontSize" value="20">
   </label>
-
-  <label><input type="checkbox" id="bold"> Bold</label>
-  <label><input type="checkbox" id="italic"> Italic</label>
-  <label><input type="checkbox" id="underline"> Underline</label>
-
-  <!-- Safe zone options -->
   <label>Safe Zone Shape:
     <select id="safeShape">
       <option value="auto">Auto</option>
@@ -51,146 +38,111 @@
   <label>Safe Zone Height:
     <input type="number" id="safeHeight" placeholder="auto">
   </label>
+  <br>
+  <button onclick="generateQR()">Generate QR Code</button>
+  <canvas id="qrCanvas"></canvas>
 
-  <button id="generateBtn">Generate</button>
-  <button id="resetBtn">Reset</button>
-  <button id="downloadBtn">Download</button>
-</div>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+  <script>
+    let uploadedImage = null;
 
-<canvas id="qrCanvas" width="400" height="400"></canvas>
+    document.getElementById('imageUpload').addEventListener('change', function (e) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        uploadedImage = new Image();
+        uploadedImage.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    });
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-<script>
-const canvas = document.getElementById('qrCanvas');
-const ctx = canvas.getContext('2d');
-let uploadedImage = null;
+    function generateQR() {
+      const text = document.getElementById("qrText").value || " ";
+      const centerText = document.getElementById("centerText").value;
+      const fontSize = parseInt(document.getElementById("fontSize").value);
+      const shape = document.getElementById("safeShape").value;
+      let safeW = parseInt(document.getElementById("safeWidth").value) || 0;
+      let safeH = parseInt(document.getElementById("safeHeight").value) || 0;
 
-document.getElementById('imageUpload').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = evt => {
-    const img = new Image();
-    img.onload = () => uploadedImage = img;
-    img.src = evt.target.result;
-  };
-  reader.readAsDataURL(file);
-});
+      const qr = qrcode(0, 'H');
+      qr.addData(text);
+      qr.make();
 
-async function generateQR() {
-  const text = document.getElementById('qrContent').value || '';
-  const centerText = document.getElementById('centerText').value.trim();
-  let fontSize = parseInt(document.getElementById('fontSize').value, 10);
-  const bold = document.getElementById('bold').checked ? 'bold ' : '';
-  const italic = document.getElementById('italic').checked ? 'italic ' : '';
-  const underline = document.getElementById('underline').checked;
-  const fontColor = document.getElementById('fontColor').value;
+      const canvas = document.getElementById("qrCanvas");
+      const ctx = canvas.getContext("2d");
 
-  const shape = document.getElementById('safeShape').value;
-  let safeW = parseInt(document.getElementById('safeWidth').value) || 0;
-  let safeH = parseInt(document.getElementById('safeHeight').value) || 0;
+      const moduleCount = qr.getModuleCount();
+      const moduleSize = 6;
+      const size = moduleCount * moduleSize;
+      canvas.width = canvas.height = size;
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.clearRect(0, 0, size, size);
+      ctx.imageSmoothingEnabled = false;
 
-  // Auto-size safe zone if not entered
-  if (!safeW || !safeH) {
-    if (uploadedImage) {
-      safeW = uploadedImage.width + 8;
-      safeH = uploadedImage.height + 8;
-    } else if (centerText) {
-      ctx.font = `${italic}${bold}${fontSize}px Arial`;
-      const textWidth = ctx.measureText(centerText).width;
-      safeW = textWidth + 8;
-      safeH = fontSize + 8;
-    } else {
-      safeW = safeH = 50;
-    }
-  }
-
-  // Generate QR data
-  const qr = await QRCode.create(text, { errorCorrectionLevel: 'H' });
-  const moduleCount = qr.modules.size;
-  const moduleSize = canvas.width / moduleCount;
-  const cx = canvas.width/2;
-  const cy = canvas.height/2;
-
-  ctx.fillStyle = "#000";
-  for (let r = 0; r < moduleCount; r++) {
-    for (let c = 0; c < moduleCount; c++) {
-      if (!qr.modules.get(r,c)) continue;
-      const x = c*moduleSize + moduleSize/2;
-      const y = r*moduleSize + moduleSize/2;
-
-      let inside = false;
-      if (shape === "rectangle") {
-        inside = (x > cx - safeW/2 && x < cx + safeW/2 && y > cy - safeH/2 && y < cy + safeH/2);
-      } else { // auto or circle
-        const dx = x - cx;
-        const dy = y - cy;
-        const radius = Math.max(safeW, safeH)/2;
-        inside = (dx*dx + dy*dy < radius*radius);
+      // Auto safe zone if no size provided
+      if (!safeW || !safeH) {
+        if (uploadedImage) {
+          safeW = uploadedImage.width + 8;
+          safeH = uploadedImage.height + 8;
+        } else if (centerText) {
+          ctx.font = `${fontSize}px Arial`;
+          const textWidth = ctx.measureText(centerText).width;
+          safeW = textWidth + 8;
+          safeH = fontSize + 8;
+        } else {
+          safeW = safeH = 50; // default fallback
+        }
       }
-      if (inside) continue;
-      ctx.fillRect(c*moduleSize, r*moduleSize, moduleSize, moduleSize);
+
+      const cx = size / 2;
+      const cy = size / 2;
+
+      // Draw QR code modules
+      ctx.fillStyle = "#000";
+      for (let r = 0; r < moduleCount; r++) {
+        for (let c = 0; c < moduleCount; c++) {
+          if (!qr.isDark(r, c)) continue;
+
+          const x = c * moduleSize + moduleSize / 2;
+          const y = r * moduleSize + moduleSize / 2;
+          let inside = false;
+
+          if (shape === "rectangle") {
+            inside = (x > cx - safeW / 2 && x < cx + safeW / 2 &&
+                      y > cy - safeH / 2 && y < cy + safeH / 2);
+          } else if (shape === "circle" || shape === "auto") {
+            const dx = x - cx;
+            const dy = y - cy;
+            const radius = Math.max(safeW, safeH) / 2;
+            inside = (dx * dx + dy * dy < radius * radius);
+          }
+
+          if (!inside) {
+            ctx.fillRect(
+              Math.floor(c * moduleSize),
+              Math.floor(r * moduleSize),
+              Math.ceil(moduleSize),
+              Math.ceil(moduleSize)
+            );
+          }
+        }
+      }
+
+      // Draw uploaded image
+      if (uploadedImage) {
+        const imgW = safeW - 8;
+        const imgH = safeH - 8;
+        ctx.drawImage(uploadedImage, cx - imgW / 2, cy - imgH / 2, imgW, imgH);
+      }
+
+      // Draw center text
+      if (centerText) {
+        ctx.font = `${fontSize}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "black";
+        ctx.fillText(centerText, cx, cy);
+      }
     }
-  }
-
-  // Draw uploaded image
-  if (uploadedImage) {
-    let imgW = uploadedImage.width;
-    let imgH = uploadedImage.height;
-    const maxImgSize = Math.min(safeW, safeH) - 8;
-    if (imgW > imgH && imgW > maxImgSize) {
-      imgH *= maxImgSize / imgW;
-      imgW = maxImgSize;
-    } else if (imgH > maxImgSize) {
-      imgW *= maxImgSize / imgH;
-      imgH = maxImgSize;
-    }
-    ctx.drawImage(uploadedImage, (canvas.width - imgW)/2, (canvas.height - imgH)/2, imgW, imgH);
-  }
-
-  // Draw center text
-  if (centerText) {
-    ctx.font = `${italic}${bold}${fontSize}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const textX = cx;
-    const textY = cy;
-
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    const textWidth = ctx.measureText(centerText).width;
-    ctx.fillRect(textX - textWidth/2 - 4, textY - fontSize/2 - 2, textWidth + 8, fontSize + 4);
-
-    ctx.fillStyle = fontColor;
-    ctx.fillText(centerText, textX, textY);
-
-    if (underline) {
-      ctx.beginPath();
-      ctx.moveTo(textX - textWidth/2, textY + fontSize/2 + 2);
-      ctx.lineTo(textX + textWidth/2, textY + fontSize/2 + 2);
-      ctx.strokeStyle = fontColor;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  }
-}
-
-document.getElementById('generateBtn').addEventListener('click', generateQR);
-document.getElementById('resetBtn').addEventListener('click', () => {
-  document.getElementById('qrContent').value = '';
-  document.getElementById('centerText').value = '';
-  document.getElementById('safeWidth').value = '';
-  document.getElementById('safeHeight').value = '';
-  uploadedImage = null;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-});
-document.getElementById('downloadBtn').addEventListener('click', () => {
-  const link = document.createElement('a');
-  link.download = 'qrcode.png';
-  link.href = canvas.toDataURL('image/png');
-  link.click();
-});
-</script>
+  </script>
 </body>
 </html>
