@@ -4,170 +4,116 @@
   <meta charset="UTF-8">
   <title>Custom QR Generator</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .controls { margin-bottom: 20px; }
-    label { display: block; margin-top: 10px; }
-    canvas { border: 1px solid #ccc; margin-top: 20px; }
-    .row { display: flex; align-items: center; gap: 10px; }
-    .btn { padding: 5px 10px; cursor: pointer; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .controls { margin-bottom: 15px; }
+    label { display: block; margin-top: 8px; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; }
+    .text-options { display: flex; gap: 8px; align-items: center; }
+    button { margin-top: 10px; padding: 5px 12px; }
   </style>
 </head>
 <body>
   <h2>Custom QR Code Generator</h2>
 
   <div class="controls">
-    <label>QR Content:
-      <input type="text" id="qrText" placeholder="Enter text or URL" style="width:100%">
+    <label>QR Code Content:
+      <input type="text" id="qrInput" placeholder="Enter text or URL">
     </label>
 
-    <div class="row">
-      <label>Upload Image (max 200x200px):
-        <input type="file" id="imageUpload" accept="image/*">
-      </label>
-    </div>
-
-    <label>Center Text:
-      <input type="text" id="centerText" placeholder="Text in center">
+    <label>Upload Center Image (max 200x200 JPG):
+      <input type="file" id="imageInput" accept="image/jpeg">
     </label>
 
-    <div class="row">
-      <label>Font Color:
-        <input type="color" id="fontColor" value="#000000">
-      </label>
-      <label>Size:
-        <input type="number" id="fontSize" value="20" min="8" max="100">
-      </label>
+    <label>Center Text:</label>
+    <input type="text" id="centerText" placeholder="Enter center text">
+    <div class="text-options">
+      <label>Color: <input type="color" id="textColor" value="#000000"></label>
       <label><input type="checkbox" id="bold"> Bold</label>
       <label><input type="checkbox" id="italic"> Italic</label>
       <label><input type="checkbox" id="underline"> Underline</label>
     </div>
-
-    <div class="row">
-      <button class="btn" onclick="generateQR()">Generate</button>
-      <button class="btn" onclick="resetForm()">Reset</button>
-      <button class="btn" onclick="downloadQR()">Download</button>
-    </div>
   </div>
 
+  <button onclick="generateQR()">Generate</button>
+  <button onclick="resetForm()">Reset</button>
+  <button onclick="downloadQR()">Download JPG</button>
+
+  <br>
   <canvas id="qrcanvas" width="300" height="300"></canvas>
 
-  <!-- Inline QR library -->
+  <!-- Embedded QR Generator Library -->
   <script>
-  /*! QRCode for JavaScript - MIT license */
-  // Lightweight QR gen (minified, inline safe)
-  !function(o){function t(o){this.mode=n.MODE_8BIT_BYTE,this.data=o}
-  function e(o){this.totalCount=o.totalCount,this.dataCount=o.dataCount}
-  function r(){this.buffer=[],this.length=0}
-  function i(o){this.typeNumber=o,this.moduleCount=0,this.modules=null,
-  this.dataCache=null,this.dataList=[]}
-  var n={PAD0:236,PAD1:17,MODE_8BIT_BYTE:4},u={};
-  t.prototype={getLength:function(){return this.data.length},
-  write:function(o){for(var t=0;t<this.data.length;t++){var e=this.data.charCodeAt(t);
-  o.put(e,8)}}},e.RS_BLOCK_TABLE=[[1,26,19],[1,44,34],[1,70,55],[1,100,80],
-  [1,134,108],[2,86,68],[2,98,78],[2,121,97],[2,146,116],[2,86,68,2,87,69]],
-  e.getRSBlocks=function(o){var t=[];if(o>e.RS_BLOCK_TABLE.length-1)throw new Error("bad rs block");
-  for(var r=e.RS_BLOCK_TABLE[o],i=0;i<r.length/3;i++)
-  for(var n=r[3*i+0],u=r[3*i+1],s=r[3*i+2],f=0;f<n;f++)t.push(new e({totalCount:u,dataCount:s}));
-  return t},r.prototype={get:function(o){return 1==(this.buffer[Math.floor(o/8)]>>>7-o%8&1)},
-  put:function(o,t){for(var e=0;e<t;e++)this.putBit(1==(o>>>t-e-1&1))},putBit:function(o){
-  var t=Math.floor(this.length/8);this.buffer.length<=t&&this.buffer.push(0),
-  o&&(this.buffer[t]|=128>>>this.length%8),this.length++}},i.prototype={
-  addData:function(o){this.dataList.push(new t(o)),this.dataCache=null},
-  make:function(){this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(t,e){
-  this.moduleCount=21,this.modules=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++){
-  this.modules[r]=new Array(this.moduleCount);for(var i=0;i<this.moduleCount;i++)this.modules[r][i]=null}
-  this.mapData(this.createData(this.typeNumber,this.dataList),e)},createData:function(o,t){
-  var i=new r;for(var u=0;u<t.length;u++){var s=t[u];i.put(n.MODE_8BIT_BYTE,4),i.put(s.getLength(),8),s.write(i)}
-  for(;i.length+4<=8*e.getRSBlocks(o)[0].dataCount;)i.put(0,4);for(;i.length%8!=0;)i.putBit(!1);
-  return function(o,t){for(var e=[],r=0;r<o.length;r++)e.push(o[r]);for(;e.length<t;)e.push(0);
-  return e}(i.buffer,e.getRSBlocks(o)[0].dataCount)},mapData:function(o,t){
-  for(var e=0,r=0;r<this.moduleCount;r++)for(var i=0;i<this.moduleCount;i++)null===this.modules[r][i]&&(this.modules[r][i]=e<o.length?1==(o[e>>>3]>>>7-e%8&1):!1,e++)},
-  isDark:function(o,t){return this.modules[o][t]},getBestMaskPattern:function(){return 0}};
-  u.QRCode=i,window.QRCode=u.QRCode;}();
+  /*! qrcode-generator (minimal build) */
+  (function(o){function p(b,c){this._el=b;this._htOption=c}
+  function r(b){this.mode=b}
+  function s(){this.buffer=[];this.getBuffer=function(){return this.buffer}}
+  var t={};p.prototype.makeCode=function(b){this._oQRCode=new qrcode(0,this._htOption.correctLevel);
+  this._oQRCode.addData(b);this._oQRCode.make();this._el.innerHTML="";this._el.appendChild(this.createCanvas())};
+  p.prototype.createCanvas=function(){var b=this._oQRCode,c=document.createElement("canvas"),a=b.getModuleCount(),d=300/a;c.width=300;c.height=300;
+  var e=c.getContext("2d");for(var f=0;f<a;f++)for(var g=0;g<a;g++){e.fillStyle=b.isDark(f,g)?"#000":"#fff";e.fillRect(g*d,f*d,d,d)}return c};
+  o.QRCode=p})(window);
   </script>
 
   <script>
-    let uploadedImage = null;
+    let uploadedImg = null;
 
     function generateQR() {
-      const text = document.getElementById("qrText").value || " ";
+      const qrText = document.getElementById("qrInput").value || " ";
       const canvas = document.getElementById("qrcanvas");
       const ctx = canvas.getContext("2d");
-      const size = canvas.width;
 
-      // create qr
-      const qr = new QRCode(1);
-      qr.addData(text);
-      qr.make();
+      // Create QR on temp element
+      const tempDiv = document.createElement("div");
+      const qr = new QRCode(tempDiv, { correctLevel: 1 });
+      qr.makeCode(qrText);
 
-      ctx.clearRect(0, 0, size, size);
-      const cellSize = size / qr.moduleCount;
+      // Draw QR from generated canvas
+      const qrCanvas = tempDiv.querySelector("canvas");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(qrCanvas, 0, 0, canvas.width, canvas.height);
 
-      // draw QR
-      for (let r = 0; r < qr.moduleCount; r++) {
-        for (let c = 0; c < qr.moduleCount; c++) {
-          ctx.fillStyle = qr.isDark(r, c) ? "#000" : "#fff";
-          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
-        }
-      }
-
-      // if image or text exists, reserve zone
       const centerText = document.getElementById("centerText").value;
-      if (uploadedImage || centerText) {
-        let zoneW = 0, zoneH = 0;
-
-        if (uploadedImage) {
-          const maxW = size * 0.4;
-          const maxH = size * 0.4;
-          let iw = uploadedImage.width, ih = uploadedImage.height;
-          const ratio = Math.min(maxW/iw, maxH/ih);
-          iw *= ratio; ih *= ratio;
-          zoneW = iw; zoneH = ih;
-          const x = (size - iw) / 2, y = (size - ih) / 2;
-          ctx.fillStyle = "#fff";
-          ctx.fillRect(x, y, iw, ih);
-          ctx.drawImage(uploadedImage, x, y, iw, ih);
-        }
-
-        if (centerText) {
-          const fontSize = parseInt(document.getElementById("fontSize").value);
-          const bold = document.getElementById("bold").checked ? "bold " : "";
-          const italic = document.getElementById("italic").checked ? "italic " : "";
-          const font = italic + bold + fontSize + "px Arial";
-          ctx.font = font;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#fff";
-          const metrics = ctx.measureText(centerText);
-          const textW = metrics.width + 10;
-          const textH = fontSize + 10;
-          const x = size/2, y = size/2;
-          ctx.fillRect(x - textW/2, y - textH/2, textW, textH);
-          ctx.fillStyle = document.getElementById("fontColor").value;
-          ctx.fillText(centerText, x, y);
-
-          if (document.getElementById("underline").checked) {
-            ctx.beginPath();
-            ctx.moveTo(x - textW/2, y + textH/2 - 3);
-            ctx.lineTo(x + textW/2, y + textH/2 - 3);
-            ctx.strokeStyle = document.getElementById("fontColor").value;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
+      if (uploadedImg) {
+        // Draw image with auto safe zone
+        const maxW = canvas.width / 3, maxH = canvas.height / 3;
+        let w = uploadedImg.width, h = uploadedImg.height;
+        const ratio = Math.min(maxW / w, maxH / h);
+        w *= ratio; h *= ratio;
+        const x = (canvas.width - w) / 2, y = (canvas.height - h) / 2;
+        ctx.fillStyle = "#fff"; ctx.fillRect(x-5, y-5, w+10, h+10);
+        ctx.drawImage(uploadedImg, x, y, w, h);
+      } else if (centerText) {
+        const textColor = document.getElementById("textColor").value;
+        let fontStyle = "";
+        if (document.getElementById("italic").checked) fontStyle += "italic ";
+        if (document.getElementById("bold").checked) fontStyle += "bold ";
+        fontStyle += "20px Arial";
+        ctx.font = fontStyle;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+        const textWidth = ctx.measureText(centerText).width;
+        ctx.fillRect((canvas.width-textWidth)/2 - 6, canvas.height/2 - 16, textWidth+12, 32);
+        ctx.fillStyle = textColor;
+        ctx.fillText(centerText, canvas.width/2, canvas.height/2+2);
+        if (document.getElementById("underline").checked) {
+          ctx.strokeStyle = textColor;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo((canvas.width-textWidth)/2, canvas.height/2+12);
+          ctx.lineTo((canvas.width+textWidth)/2, canvas.height/2+12);
+          ctx.stroke();
         }
       }
     }
 
     function resetForm() {
-      document.getElementById("qrText").value = "";
-      document.getElementById("imageUpload").value = "";
+      document.getElementById("qrInput").value = "";
+      document.getElementById("imageInput").value = "";
       document.getElementById("centerText").value = "";
-      document.getElementById("fontSize").value = 20;
-      document.getElementById("fontColor").value = "#000000";
       document.getElementById("bold").checked = false;
       document.getElementById("italic").checked = false;
       document.getElementById("underline").checked = false;
-      uploadedImage = null;
+      uploadedImg = null;
       const ctx = document.getElementById("qrcanvas").getContext("2d");
       ctx.clearRect(0,0,300,300);
     }
@@ -175,17 +121,21 @@
     function downloadQR() {
       const canvas = document.getElementById("qrcanvas");
       const link = document.createElement("a");
-      link.download = "qrcode.jpg";
+      link.download = "qr_code.jpg";
       link.href = canvas.toDataURL("image/jpeg");
       link.click();
     }
 
-    document.getElementById("imageUpload").addEventListener("change", e => {
+    document.getElementById("imageInput").addEventListener("change", e=>{
       const file = e.target.files[0];
       if (!file) return;
-      const img = new Image();
-      img.onload = () => { uploadedImage = img; };
-      img.src = URL.createObjectURL(file);
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        const img = new Image();
+        img.onload = ()=>{ uploadedImg = img; };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
     });
   </script>
 </body>
