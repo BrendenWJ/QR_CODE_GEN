@@ -15,17 +15,14 @@
 <h2>Custom QR Code Generator</h2>
 
 <div class="controls">
-  <!-- QR content input -->
   <label>QR Content:
-    <input type="text" id="qrContent" style="width:80%;" value="">
+    <input type="text" id="qrContent" style="width:80%;" value="https://valknutgroup.com/">
   </label>
 
-  <!-- File upload below QR content -->
   <label>Upload Image (max 200x200px):
     <input type="file" id="imageUpload" accept="image/*">
   </label>
 
-  <!-- Center text, color, font size -->
   <label>Center Text:
     <input type="text" id="centerText" placeholder="Center text">
   </label>
@@ -36,12 +33,10 @@
     <input type="number" id="fontSize" value="20" min="8" max="100">
   </label>
 
-  <!-- Text style checkboxes -->
   <label><input type="checkbox" id="bold"> Bold</label>
   <label><input type="checkbox" id="italic"> Italic</label>
   <label><input type="checkbox" id="underline"> Underline</label>
 
-  <!-- Buttons -->
   <button id="generateBtn">Generate</button>
   <button id="resetBtn">Reset</button>
   <button id="downloadBtn">Download</button>
@@ -70,22 +65,46 @@ document.getElementById('imageUpload').addEventListener('change', e => {
 async function generateQR() {
   const text = document.getElementById('qrContent').value || '';
   const centerText = document.getElementById('centerText').value.trim();
-  const fontColor = document.getElementById('fontColor').value;
   let fontSize = parseInt(document.getElementById('fontSize').value, 10);
   const bold = document.getElementById('bold').checked ? 'bold ' : '';
   const italic = document.getElementById('italic').checked ? 'italic ' : '';
   const underline = document.getElementById('underline').checked;
+  const fontColor = document.getElementById('fontColor').value;
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Generate QR directly on canvas
-  await QRCode.toCanvas(canvas, text, { width: canvas.width, margin:1 });
-
-  // Draw uploaded image
+  // Determine safe zone radius
+  let safeRadius = fontSize;
   if (uploadedImage) {
-    const maxImgSize = canvas.width / 3;
+    const imgMaxSize = Math.max(uploadedImage.width, uploadedImage.height);
+    safeRadius = Math.max(safeRadius, imgMaxSize/2 + 10);
+  }
+  if (centerText) safeRadius = Math.max(safeRadius, fontSize + 10);
+
+  // Generate QR data
+  const qr = await QRCode.create(text, { errorCorrectionLevel: 'H' });
+  const moduleCount = qr.modules.size;
+  const moduleSize = canvas.width / moduleCount;
+
+  ctx.fillStyle = "#000";
+  for (let r = 0; r < moduleCount; r++) {
+    for (let c = 0; c < moduleCount; c++) {
+      if (qr.modules.get(r, c)) {
+        const x = c * moduleSize;
+        const y = r * moduleSize;
+        const dx = x + moduleSize/2 - canvas.width/2;
+        const dy = y + moduleSize/2 - canvas.height/2;
+        if (Math.sqrt(dx*dx + dy*dy) < safeRadius) continue; // skip center
+        ctx.fillRect(x, y, moduleSize, moduleSize);
+      }
+    }
+  }
+
+  // Draw uploaded image in center
+  if (uploadedImage) {
     let imgW = uploadedImage.width;
     let imgH = uploadedImage.height;
+    const maxImgSize = safeRadius * 2 - 10;
     if (imgW > imgH && imgW > maxImgSize) {
       imgH *= maxImgSize / imgW;
       imgW = maxImgSize;
@@ -93,9 +112,7 @@ async function generateQR() {
       imgW *= maxImgSize / imgH;
       imgH = maxImgSize;
     }
-    const imgX = (canvas.width - imgW)/2;
-    const imgY = (canvas.height - imgH)/2;
-    ctx.drawImage(uploadedImage, imgX, imgY, imgW, imgH);
+    ctx.drawImage(uploadedImage, (canvas.width - imgW)/2, (canvas.height - imgH)/2, imgW, imgH);
   }
 
   // Draw center text
@@ -103,20 +120,12 @@ async function generateQR() {
     ctx.font = `${italic}${bold}${fontSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    let textWidth = ctx.measureText(centerText).width;
-
-    while (textWidth > canvas.width*0.6 && fontSize > 8) {
-      fontSize--;
-      ctx.font = `${italic}${bold}${fontSize}px Arial`;
-      textWidth = ctx.measureText(centerText).width;
-    }
-
-    const padding = 6;
     const textX = canvas.width/2;
     const textY = canvas.height/2;
 
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillRect(textX - textWidth/2 - padding, textY - fontSize/2 - padding/2, textWidth + padding*2, fontSize + padding);
+    const textWidth = ctx.measureText(centerText).width;
+    ctx.fillRect(textX - textWidth/2 - 6, textY - fontSize/2 - 3, textWidth + 12, fontSize + 6);
 
     ctx.fillStyle = fontColor;
     ctx.fillText(centerText, textX, textY);
