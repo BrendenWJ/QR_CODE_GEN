@@ -39,6 +39,8 @@
 
   <!-- QR engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <div id="tempQR" style="display:none;"></div>
+
   <script>
     const canvas = document.getElementById('qrCanvas');
     const ctx = canvas.getContext('2d');
@@ -68,24 +70,36 @@
       const underline = document.getElementById('underline').checked;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('tempQR').innerHTML = "";
 
-      // Temporary offscreen canvas for QR
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-
-      const qrCode = new QRCode(tempCanvas, {
+      // Generate QR in temp div
+      const qr = new QRCode(document.getElementById('tempQR'), {
         text: text,
         width: canvas.width,
         height: canvas.height,
         correctLevel: QRCode.CorrectLevel.M
       });
 
-      const qrImg = new Image();
-      qrImg.onload = function() {
+      // Grab QR image
+      setTimeout(() => { // wait for QRCode to render
+        const qrImg = document.querySelector('#tempQR img, #tempQR canvas');
+        if (!qrImg) return;
+
+        // Draw QR onto main canvas
+        if (qrImg.tagName === 'IMG') {
+          const image = new Image();
+          image.onload = () => drawFinal(image);
+          image.src = qrImg.src;
+        } else if (qrImg.tagName === 'CANVAS') {
+          drawFinal(qrImg);
+        }
+
+      }, 100);
+      
+      function drawFinal(qrImg) {
         ctx.drawImage(qrImg, 0, 0, canvas.width, canvas.height);
 
-        // Draw uploaded image in center
+        // Draw uploaded image
         if (uploadedImage) {
           const maxImgSize = canvas.width / 3;
           let imgW = uploadedImage.width;
@@ -109,7 +123,6 @@
           ctx.textBaseline = 'middle';
           let textWidth = ctx.measureText(centerText).width;
 
-          // Shrink font if too wide
           while (textWidth > canvas.width * 0.6 && fontSize > 8) {
             fontSize--;
             ctx.font = `${italic}${bold}${fontSize}px Arial`;
@@ -120,7 +133,6 @@
           const textX = canvas.width / 2;
           const textY = canvas.height / 2;
 
-          // Semi-transparent background behind text
           ctx.fillStyle = 'rgba(255,255,255,0.7)';
           ctx.fillRect(textX - textWidth / 2 - padding, textY - fontSize / 2 - padding / 2, textWidth + padding * 2, fontSize + padding);
 
@@ -136,8 +148,7 @@
             ctx.stroke();
           }
         }
-      };
-      qrImg.src = tempCanvas.toDataURL();
+      }
     }
 
     document.getElementById('generateBtn').addEventListener('click', generateQR);
