@@ -62,7 +62,7 @@
 
     function generateQR() {
       const text = document.getElementById("qrText").value || " ";
-      const centerText = document.getElementById("centerText").value;
+      const centerText = document.getElementById("centerText").value.trim();
       const fontSize = parseInt(document.getElementById("fontSize").value);
       const shape = document.getElementById("safeShape").value;
       let safeW = parseInt(document.getElementById("safeWidth").value) || 0;
@@ -83,23 +83,26 @@
       ctx.clearRect(0, 0, size, size);
       ctx.imageSmoothingEnabled = false;
 
-      // Auto safe zone if no size provided
-      if (!safeW || !safeH) {
-        if (uploadedImage) {
-          safeW = uploadedImage.width + 8;
-          safeH = uploadedImage.height + 8;
-        } else if (centerText) {
-          ctx.font = `${fontSize}px Arial`;
-          const textWidth = ctx.measureText(centerText).width;
-          safeW = textWidth + 8;
-          safeH = fontSize + 8;
-        } else {
-          safeW = safeH = 50; // default fallback
-        }
-      }
-
       const cx = size / 2;
       const cy = size / 2;
+
+      // Determine if we actually need a safe zone
+      const needSafeZone = (uploadedImage || centerText);
+
+      // Auto safe zone size only if needed
+      if (needSafeZone) {
+        if (!safeW || !safeH) {
+          if (uploadedImage) {
+            safeW = uploadedImage.width + 8;
+            safeH = uploadedImage.height + 8;
+          } else if (centerText) {
+            ctx.font = `${fontSize}px Arial`;
+            const textWidth = ctx.measureText(centerText).width;
+            safeW = textWidth + 8;
+            safeH = fontSize + 8;
+          }
+        }
+      }
 
       // Draw QR code modules
       ctx.fillStyle = "#000";
@@ -111,14 +114,16 @@
           const y = r * moduleSize + moduleSize / 2;
           let inside = false;
 
-          if (shape === "rectangle") {
-            inside = (x > cx - safeW / 2 && x < cx + safeW / 2 &&
-                      y > cy - safeH / 2 && y < cy + safeH / 2);
-          } else if (shape === "circle" || shape === "auto") {
-            const dx = x - cx;
-            const dy = y - cy;
-            const radius = Math.max(safeW, safeH) / 2;
-            inside = (dx * dx + dy * dy < radius * radius);
+          if (needSafeZone) {
+            if (shape === "rectangle") {
+              inside = (x > cx - safeW / 2 && x < cx + safeW / 2 &&
+                        y > cy - safeH / 2 && y < cy + safeH / 2);
+            } else if (shape === "circle" || shape === "auto") {
+              const dx = x - cx;
+              const dy = y - cy;
+              const radius = Math.max(safeW, safeH) / 2;
+              inside = (dx * dx + dy * dy < radius * radius);
+            }
           }
 
           if (!inside) {
